@@ -17,26 +17,55 @@ mongoose.Promise = global.Promise;
 db.on('error', console.error.bind(console, 'conection error'));
 db.once('open', function() {console.log('Connected to DB!')} );
 
-// creating the Schema
-const kittySchema = Schema({
-    name: String
+
+// creating the Schemas
+const personSchema = Schema({
+  _id: Number,
+  name: String,
+  age: Number,
+  stories: [ {type: Number, ref: 'Story'} ]
 });
 
-kittySchema.methods.speak = function(){
-  var greetings = this.name ? "Meow name is " + this.name : "I am a dog... WTF???";
-  console.log(greetings);
-};
+const storySchema = Schema({
+  title: String,
+  creator: {type: Number, ref: 'Person'},
+  fans: [ {type: Number, ref: 'Person'} ]
+});
 
-// compiling the Schema
-var Kitten = mongoose.model('Kitten', kittySchema);
 
+// compiling the Schemas
+const Story = mongoose.model('Story', storySchema);
+const Person = mongoose.model('Person', personSchema);
+
+
+// variables
+const alejandro = new Person({
+  _id: 0,
+  name: 'Alejandro Dumas',
+  age: 50,
+});
+
+const condeMonteCristo = new Story({
+  title: 'El Conde de Montecristo',
+  creator: alejandro.id
+});
+
+// save the values
+// alejandro.save().then( () => console.log('saved'));
+// condeMonteCristo.save().then( () => console.log('saved'));
+
+// Story.find()
+//       .populate('creator')
+//       .then( (records) => console.log(records) )
+//       .catch( (e) => console.log(e.message));
 
 app.get("/", (req, res) => {
   res.end('<h1>HELLO</h1>');
 })
 
 app.get("/find", (req, res) => {
-  Kitten.find()
+  Story.find()
+     .populate('creator')
      .then( (records) => res.end(`<p>${records}</p>`))
      .catch( (e) => console.log(e.message));
 });
@@ -56,7 +85,3 @@ app.listen(9999, () => console.log("listening..."));
 // Kitten.find()
 //   .then( (records) => console.log(records))
 //   .catch( (e) => console.log(e.message));
-
-Kitten.find({ name: /^P/ })
-  .then( (result) => console.log(result))
-  .catch( (e) => console.log(e.message));
