@@ -1,11 +1,15 @@
-// import mongoose
+// imports
 const mongoose = require('mongoose');
 const express = require('express');
+const cors = require('cors');
+const bodyParser = require('body-parser');
 
 // get necesary variables from mongose and express
 const db = mongoose.connection;
 const Schema = mongoose.Schema;
 const app = express();
+
+
 
 // connect to the database 'kitten_tests'
 mongoose.connect('mongodb://localhost/kitten_tests');
@@ -17,71 +21,68 @@ mongoose.Promise = global.Promise;
 db.on('error', console.error.bind(console, 'conection error'));
 db.once('open', function() {console.log('Connected to DB!')} );
 
+// setting up the middle-ware. You don't call 'next()' because bodyParser and
+// cors already call it inside them
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({extended: true}));
+app.use(cors());
 
-// creating the Schemas
-const personSchema = Schema({
-  _id: Number,
-  name: String,
-  age: Number,
-  stories: [ {type: Number, ref: 'Story'} ]
-});
-
-const storySchema = Schema({
+// creating a simple Schema
+const bookSchema = Schema({
   title: String,
-  creator: {type: Number, ref: 'Person'},
-  fans: [ {type: Number, ref: 'Person'} ]
+  author: String,
+  category: String
 });
 
 
-// compiling the Schemas
-const Story = mongoose.model('Story', storySchema);
-const Person = mongoose.model('Person', personSchema);
+// creating the model from the bookSchema
+const Book = mongoose.model('Book', bookSchema);
 
 
-// variables
-const alejandro = new Person({
-  _id: 0,
-  name: 'Alejandro Dumas',
-  age: 50,
+// creating the routes
+
+// POST
+app.post('/books', (req, res) =>{
+  const newBook = new Book(req.body);
+  newBook.save()
+    .then(savedBook => res.json(savedBook))
+    .catch(e => console.log('Error: ', e.message));
 });
 
-const condeMonteCristo = new Story({
-  title: 'El Conde de Montecristo',
-  creator: alejandro.id
+
+// GET
+app.get('/findall', (req, res) => {
+  Book.find()
+  .then(records => res.end(`<p>${records}</p>`))
+  .catch(e => console.log('Error: ', e.message));
 });
 
-// save the values
-// alejandro.save().then( () => console.log('saved'));
-// condeMonteCristo.save().then( () => console.log('saved'));
 
-// Story.find()
-//       .populate('creator')
-//       .then( (records) => console.log(records) )
-//       .catch( (e) => console.log(e.message));
-
-app.get("/", (req, res) => {
-  res.end('<h1>HELLO</h1>');
-})
-
-app.get("/find", (req, res) => {
-  Story.find()
-     .populate('creator')
-     .then( (records) => res.end(`<p>${records}</p>`))
-     .catch( (e) => console.log(e.message));
+// GET ONE
+app.get('/findone/:id', (req, res) => {
+  Book.findById(req.params.id)
+  .then(records => res.end(`<p>${records}</p>`))
+  .catch(e => console.log('Error: ', e.message));
 });
 
-app.listen(9999, () => console.log("listening..."));
+// PUT
+app.put('/update/:id', (req, res) => {
+  Book.findById(req.params.id)
+    .then(record => {
+      Object.assign(record, req.body);
 
-// creating and testing the kitty
-// var pluto = new Kitten({name: 'Max'});
-// pluto.speak();
+      record.save()
+        .then(savedBook => res.json(savedBook))
+        .catch(e => console.log('Error: ', e.message));
+    })
+    .catch(e => console.log('Error: ', e.message));
+});
 
-// saving the kitty in the DB
-// pluto.save().then( () => console.log(`The record ${pluto.name} was added`));
+// DELETE
+app.put('/delete/:id', (req, res) => {
+  Book.findByIdAndRemove(req.params.id)
+  .then(savedBook => res.json(savedBook))
+  .catch(e => console.log('Error: ', e.message));
+});
 
-// Kitten.findByIdAndRemove('57b3b6739f09ffa80c114905')
-//   .then(() => console.log('removed'));
-
-// Kitten.find()
-//   .then( (records) => console.log(records))
-//   .catch( (e) => console.log(e.message));
+app.listen(3000, () => console.log('Server listening at port 3000'));
